@@ -1,8 +1,13 @@
 # SyncFlow - 免登录跨端文本与文件极速中转站
 
-![SyncFlow White Theme](public/syncflow_white.png)
+<p listing="center">
+  <a href="https://github.com/chonggao9/syncflow"><img src="https://img.shields.io/badge/GitHub-SyncFlow-6366f1?style=flat-square&logo=github" alt="GitHub Repo"></a>
+  <img src="https://img.shields.io/badge/License-MIT-10b981?style=flat-square" alt="License MIT">
+  <img src="https://img.shields.io/badge/Node.js-%3E%3D18.0.0-0ea5e9?style=flat-square&logo=nodedotjs" alt="Node.js">
+  <img src="https://img.shields.io/badge/Socket.IO-v4.7-a855f7?style=flat-square&logo=socketdotio" alt="Socket.IO">
+</p>
 
-> **SyncFlow** 是一款现代、轻量、免登录的跨设备文本剪贴板同步与文件临时共享 Web 应用。基于 Node.js、Socket.IO 与 HTML5 构建，旨在替代传统的“微信文件传输助手”或“发送邮件给自身”，提供零门槛、即用即走、隐私安全的数据中转体验。
+> **SyncFlow** 是一款现代、轻量、免登录的跨设备文本剪贴板同步与文件临时共享 Web 应用。基于 Node.js、Socket.IO 与 HTML5 构建，旨在替代传统的“微信文件传输助手”或“发送邮件给自身”，提供零门槛、即用即走、数据隔离与长效固定结合的中转体验。
 
 ---
 
@@ -35,15 +40,33 @@
 
 ---
 
+## 🛠️ 快速开始 (本地开发)
+
+```bash
+# 1. 克隆 GitHub 仓库
+git clone https://github.com/chonggao9/syncflow.git
+cd syncflow
+
+# 2. 安装依赖
+npm install
+
+# 3. 启动开发服务
+npm start
+```
+
+服务启动后，在浏览器访问 `http://localhost:3000` 即可开始使用。
+
+---
+
 ## 🏗️ 项目目录结构
 
 ```
-d:\work\text_file_sync_app\
-├── Dockerfile              # Docker 镜像构建文件
+syncflow/
+├── Dockerfile              # Docker 镜像构建脚本
 ├── docker-compose.yml      # Docker Compose / Dockge 编排配置
 ├── package.json            # Node.js 项目依赖与运行脚本
-├── server.js               # 后端主程序 (Express + Socket.IO)
-├── uploads/                # 物理文件存储目录 (自动创建)
+├── server.js               # 后端主程序 (Express + Socket.IO + 持久化引擎)
+├── uploads/                # 物理文件存储目录 (自动创建与清洗)
 ├── data/                   # 持久化数据目录 (pinned-rooms.json, 自动创建)
 └── public/                 # 前端静态资源
     ├── index.html          # 单页结构与 Modal 模态框
@@ -55,34 +78,61 @@ d:\work\text_file_sync_app\
 
 ## 🚀 部署指南
 
-### 1. PM2 常规部署（推荐 Linux 服务器）
+### 1. Dockge 可视化部署 (最推荐)
+
+1. 将项目 Git 仓库克隆到 Dockge 的 Stacks 目录：
+   ```bash
+   cd /opt/stacks
+   git clone https://github.com/chonggao9/syncflow.git
+   ```
+2. 打开 Dockge 控制台 (`http://服务器IP:5001`)。
+3. 在 Stack 列表找到 `syncflow`，点击 **`🚀 部署` (Deploy)**，即可基于自带的 `Dockerfile` 完成一键构建与启动。
+
+---
+
+### 2. PM2 常规部署 (Linux 服务器)
 
 ```bash
-# 解压项目代码
-unzip syncflow.zip -d /opt/syncflow
-cd /opt/syncflow
+# 1. 服务器克隆仓库
+cd /opt
+git clone https://github.com/chonggao9/syncflow.git
+cd syncflow
 
-# 安装生产依赖
+# 2. 安装生产依赖
 npm install --production
 
-# 全局安装 PM2 并启动
+# 3. 使用 PM2 启动服务
 npm install -g pm2
 pm2 start server.js --name "syncflow"
 pm2 save
 pm2 startup
 ```
 
-### 2. Dockge 可视化部署（推荐）
-
-1. 将 `syncflow.zip` 解压到 Dockge 的 Stacks 目录：`/opt/stacks/syncflow`
-2. 打开 Dockge 控制台 (`http://服务器IP:5001`)。
-3. 找到自动识别的 `syncflow` 项目，直接点击 **`🚀 部署` (Deploy)** 即可基于自带的 `Dockerfile` 完成自动构建与运行。
+---
 
 ### 3. 原生 Docker / Docker Compose 部署
 
 ```bash
-# 使用 Docker Compose 启动
 docker-compose up -d --build
+```
+
+---
+
+## 🔄 运维与更新流 (Git Workflow)
+
+### 本地修改后提交更新
+```bash
+git add .
+git commit -m "feat: 更新功能说明"
+git push origin main
+```
+
+### 服务器一键拉取热更新 (PM2)
+```bash
+cd /opt/syncflow
+git pull
+npm install --production
+pm2 restart syncflow
 ```
 
 ---
@@ -110,15 +160,6 @@ docker-compose up -d --build
 
 ---
 
-## 🛡️ 安全与健壮性设计
-
-1. **路径遍历防御**：下载与删除接口使用 `ROOM_ID_REGEX` / `SAFE_ID_REGEX` 格式白名单校验，并辅以 `path.resolve` 路径边界检查。
-2. **安全 MIME 过滤**：multer 上传拦截危险扩展名及脚本类型（如 `.exe`、`.sh`、`.php`）。
-3. **容量限制**：服务端限制最大临时房间数为 `1000`，单次上传文件上限为 `10` 个。
-4. **原子化持久化**：使用写入 `.tmp` 临时文件再 `renameSync` 的原子化文件落盘策略，防止因异常断电造成 JSON 损毁。
-
----
-
 ## 📄 开源许可
 
-[MIT License](LICENSE) © 2026 SyncFlow
+[MIT License](LICENSE) © 2026 [chonggao9](https://github.com/chonggao9)
