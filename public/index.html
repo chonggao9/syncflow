@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SyncFlow - 免登录跨端文本与文件中转站</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Remix Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  
+  <!-- Main Styles -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- QRCode Library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+
+  <!-- Ambient Glow Elements -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Main Container -->
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-icon">
+          <i class="ri-radar-line"></i>
+        </div>
+        <div class="brand-text">
+          <h1>SyncFlow</h1>
+          <span class="tag">免登录极速中转站</span>
+        </div>
+      </div>
+
+      <!-- Pinned Rooms Dropdown -->
+      <div class="pinned-dropdown-wrap">
+        <button class="btn-pinned-nav" id="btn-pinned-nav" title="固定房间列表">
+          <i class="ri-bookmark-3-line"></i>
+          <span>固定房间</span>
+          <i class="ri-arrow-down-s-line" id="pinned-arrow"></i>
+        </button>
+        <div class="pinned-dropdown" id="pinned-dropdown">
+          <div class="pinned-dropdown-header">
+            <span>📌 我的固定房间</span>
+            <button class="btn-create-pinned" id="btn-open-create-pinned">
+              <i class="ri-add-line"></i> 新建
+            </button>
+          </div>
+          <ul id="pinned-rooms-list">
+            <li class="pinned-empty">暂无固定房间</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Room Header Actions -->
+      <div class="room-pill" id="room-pill">
+        <span class="live-dot" id="live-status"></span>
+        <span class="pinned-badge" id="pinned-room-badge" style="display:none;" title="固定房间">
+          <i class="ri-pushpin-2-fill"></i>
+        </span>
+        <span class="label">房间:</span>
+        <span class="room-id" id="display-room-id">------</span>
+        <button class="btn-icon" id="btn-pin-toggle" title="固定此房间">
+          <i class="ri-pushpin-line" id="pin-toggle-icon"></i>
+        </button>
+        <button class="btn-icon" id="btn-copy-room" title="复制房间链接">
+          <i class="ri-file-copy-line"></i>
+        </button>
+        <button class="btn-icon" id="btn-share-modal" title="显示二维码与分享">
+          <i class="ri-qr-code-line"></i>
+        </button>
+        <button class="btn-icon danger" id="btn-destroy-room" title="立刻清空并销毁房间">
+          <i class="ri-delete-bin-7-line"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Sub Info Banner -->
+    <div class="info-bar">
+      <div class="info-item">
+        <i class="ri-user-shared-line"></i>
+        <span id="user-count-text">在线设备: 1</span>
+      </div>
+      <div class="info-item highlight">
+        <i class="ri-shield-keyhole-line"></i>
+        <span>端到端加密与传输隔离</span>
+      </div>
+      <div class="info-item text-muted">
+        <i class="ri-timer-flash-line"></i>
+        <span>即用即走 · 关网/24H 自动焚毁</span>
+      </div>
+    </div>
+
+    <!-- Main Workspace Card -->
+    <main class="workspace-card">
+      
+      <!-- Navigation Tabs -->
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="tab-text" id="tab-btn-text">
+          <i class="ri-message-3-line"></i>
+          <span>文本 / 剪贴板同步</span>
+          <span class="pulse-badge" id="text-badge" style="display: none;"></span>
+        </button>
+        <button class="tab-btn" data-tab="tab-files" id="tab-btn-files">
+          <i class="ri-folder-zip-line"></i>
+          <span>文件共享栈</span>
+          <span class="count-badge" id="files-count-badge">0</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: Text & Clipboard Sync -->
+      <section class="tab-content active" id="tab-text">
+        <div class="editor-header">
+          <div class="typing-indicator" id="typing-indicator">
+            <span class="typing-dots">
+              <span></span><span></span><span></span>
+            </span>
+            <span id="typing-user-text">有人正在输入...</span>
+          </div>
+          <div class="text-meta">
+            <span id="char-count">0 字符</span>
+            <span class="dot-sep">•</span>
+            <span id="line-count">0 行</span>
+          </div>
+        </div>
+
+        <div class="editor-wrapper">
+          <textarea id="sync-textarea" placeholder="在此粘贴文本、代码段或剪贴板内容，房间内所有设备将实时同步..." spellcheck="false"></textarea>
+        </div>
+
+        <div class="editor-actions">
+          <div class="left-actions">
+            <button class="btn btn-primary" id="btn-copy-text">
+              <i class="ri-clipboard-line"></i>
+              <span>复制全文</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-paste-text">
+              <i class="ri-corner-down-left-line"></i>
+              <span>从剪贴板粘贴</span>
+            </button>
+          </div>
+          <div class="right-actions">
+            <button class="btn btn-ghost danger" id="btn-clear-text">
+              <i class="ri-eraser-line"></i>
+              <span>清空内容</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: File Sharing Dropzone -->
+      <section class="tab-content" id="tab-files">
+        
+        <!-- Drag and Drop Dropzone -->
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="file-input" multiple style="display: none;">
+          <div class="dropzone-inner">
+            <div class="upload-icon-circle">
+              <i class="ri-upload-cloud-2-line"></i>
+            </div>
+            <h3>拖拽文件到此处，或 <span class="browse-link">浏览文件</span></h3>
+            <p class="dropzone-tip">支持各类图片、文档、压缩包、视频（单文件最大 500MB）</p>
+          </div>
+        </div>
+
+        <!-- Upload Progress -->
+        <div class="progress-bar-container" id="upload-progress-container" style="display: none;">
+          <div class="progress-info">
+            <span id="progress-filename">正在上传...</span>
+            <span id="progress-percent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <!-- Files List Container -->
+        <div class="files-header">
+          <h4><i class="ri-file-list-3-line"></i> 暂存文件列表</h4>
+          <span class="sub-tip" id="total-size-text">总计 0 MB</span>
+        </div>
+
+        <div class="files-grid" id="files-grid">
+          <!-- Empty State Placeholder -->
+          <div class="empty-files" id="empty-files-state">
+            <i class="ri-inbox-archive-line"></i>
+            <p>暂无文件，快拖入文件上传分享吧</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>SyncFlow Ephemeral Transfer • 无需注册 • 跨设备即时通讯</p>
+    </footer>
+
+  </div>
+
+  <!-- Share Modal -->
+  <div class="modal-backdrop" id="share-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="ri-qr-code-line"></i> 扫描二维码加入房间</h3>
+        <button class="btn-close" id="btn-close-modal"><i class="ri-close-line"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="qrcode-wrapper">
+          <div id="qrcode-box"></div>
+        </div>
+        <p class="share-hint">移动端用微信或浏览器扫码，瞬间跨端同步</p>
+        
+        <div class="share-input-group">
+          <input type="text" id="share-url-input" readonly>
+          <button class="btn btn-primary" id="btn-modal-copy">复制链接</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Pinned Room Modal -->
+  <div class="modal-backdrop" id="create-pinned-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="ri-pushpin-2-line"></i> 新建固定房间</h3>
+        <button class="btn-close" id="btn-close-pinned-modal"><i class="ri-close-line"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="share-hint" style="text-align:left; margin-bottom:8px;">
+          固定房间不会自动过期，文本与文件在服务重启后仍然保留。<br>
+          自定义一个易于记忆的 ID（如 <code>my-team</code>、<code>home2025</code>）
+        </p>
+        <div class="pinned-create-form">
+          <div class="pinned-input-wrap">
+            <span class="pinned-prefix">/r/</span>
+            <input type="text" id="pinned-room-id-input" placeholder="my-team"
+              maxlength="20" autocomplete="off" spellcheck="false">
+          </div>
+          <p class="pinned-hint" id="pinned-hint-text">4~20 位小写字母、数字或连字符，不可以连字符开头/结尾</p>
+          <div class="pinned-form-actions">
+            <button class="btn btn-primary" id="btn-confirm-create-pinned">
+              <i class="ri-pushpin-2-line"></i> 创建固定房间
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Socket.IO Client Lib -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- App JavaScript Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

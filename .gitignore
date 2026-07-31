@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Uploaded & Ephemeral Data (Do not commit user files/data)
+uploads/*
+!uploads/.gitkeep
+data/*
+!data/.gitkeep
+
+# System & Log Files
+*.log
+.DS_Store
+Thumbs.db
+.env
