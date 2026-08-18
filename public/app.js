@@ -36,7 +36,29 @@ document.addEventListener('DOMContentLoaded', () => {
   let isLocalTyping = false;
   let typingTimeout = null;
 
-  socket.emit('join-room', roomId);
+  // Socket 首次连接及重连成功时，自动重新加入房间拉取最新全量状态
+  socket.on('connect', () => {
+    socket.emit('join-room', roomId);
+  });
+
+  // 页面唤醒/切回前台时的状态恢复机制（解决浏览器后台挂起/休眠后数据不同步的 Bug）
+  function refreshRoomStateOnActive() {
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      socket.emit('join-room', roomId);
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      refreshRoomStateOnActive();
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    refreshRoomStateOnActive();
+  });
 
   // UI Elements
   const textarea = document.getElementById('sync-textarea');
@@ -458,11 +480,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Extend init-room-state to include isPinned
+  // Extend init-room-state to include isPinned and preserve active local typing
   socket.on('init-room-state', (state) => {
     currentUserId = state.userId;
-    textarea.value = state.text || '';
-    updateTextStats();
+    if (!isLocalTyping) {
+      textarea.value = state.text || '';
+      updateTextStats();
+    }
     renderFilesList(state.files || []);
     setRoomPinnedState(state.isPinned || false);
   });
