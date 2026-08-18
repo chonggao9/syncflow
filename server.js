@@ -190,7 +190,7 @@ app.post('/api/upload', (req, res, next) => {
     next();
   });
 }, (req, res) => {
-  const roomId = req.body.roomId;
+  const roomId = req.body?.roomId;
   // #3 上传接口：临时或固定房间 ID 均可
   if (!roomId || !isValidRoomId(roomId)) {
     return res.status(400).json({ error: 'Invalid or missing room ID format.' });
@@ -246,7 +246,8 @@ app.get('/api/pinned-rooms', (req, res) => {
 
 // POST /api/pinned-rooms：创建固定房间
 app.post('/api/pinned-rooms', (req, res) => {
-  const { roomId } = req.body;
+  // express 5 中 req.body 未解析时为 undefined，需防御性兜底
+  const { roomId } = req.body || {};
   if (!roomId || !PINNED_ROOM_ID_REGEX.test(roomId)) {
     return res.status(400).json({
       error: '固定房间 ID 格式错误，需为 4~20 位小写字母/数字/连字符，且不可以连字符开头或结尾。'
@@ -301,10 +302,22 @@ io.on('connection', (socket) => {
   let userId = 'User_' + Math.random().toString(36).substring(2, 6);
 
   socket.on('join-room', (roomId) => {
-    currentRoomId = roomId;
-    socket.join(roomId);
+    if (typeof roomId !== 'string') return;
+    const cleanRoomId = roomId.toLowerCase().trim();
+    if (!isValidRoomId(cleanRoomId)) return;
 
-    const room = getOrCreateRoom(roomId);
+    if (currentRoomId && currentRoomId !== cleanRoomId) {
+      socket.leave(currentRoomId);
+    }
+    currentRoomId = cleanRoomId;
+    socket.join(cleanRoomId);
+
+    let room;
+    try {
+      room = getOrCreateRoom(cleanRoomId);
+    } catch (e) {
+      return;
+    }
     room.lastActive = Date.now();
 
     // Send initial room state to newly joined client
@@ -316,8 +329,8 @@ io.on('connection', (socket) => {
     });
 
     // Notify room of updated client count
-    const roomSize = io.sockets.adapter.rooms.get(roomId)?.size || 1;
-    io.to(roomId).emit('room-users-update', { count: roomSize });
+    const roomSize = io.sockets.adapter.rooms.get(cleanRoomId)?.size || 1;
+    io.to(cleanRoomId).emit('room-users-update', { count: roomSize });
   });
 
   // Text Live Sync
